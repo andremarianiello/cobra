@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/chzyer/readline"
 	flag "github.com/spf13/pflag"
 )
 
@@ -686,6 +687,36 @@ func (c *Command) preRun() {
 // for commands and then corresponding flags.
 func (c *Command) Execute() error {
 	_, err := c.ExecuteC()
+	return err
+}
+
+func (c *Command) ExecuteInteractive(cfg *readline.Config, errFunc func(error) error) error {
+	l, err := readline.NewEx(cfg)
+	if err != nil {
+		return err
+	}
+	var line string
+	for {
+		line, err = l.Readline()
+		if err == readline.ErrInterrupt {
+			if len(line) == 0 {
+				break
+			} else {
+				continue
+			}
+		} else if err == io.EOF {
+			break
+		}
+		args := strings.Fields(line)
+		c.SetArgs(args)
+		_, err = c.ExecuteC()
+		if errFunc != nil {
+			err = errFunc(err)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return err
 }
 
